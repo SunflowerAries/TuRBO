@@ -21,6 +21,35 @@ from .gp import train_gp
 from .turbo_1 import Turbo1
 from .utils import from_unit_cube, latin_hypercube, to_unit_cube
 
+def nearest(x):
+    y = deepcopy(x)
+    XX = 10
+    XXX = 14
+    for xx in [14, 16, 18]:
+        if abs(x[1] - xx) < XX:
+            XX = abs(x[0] - xx)
+            XXX = xx
+    y[0] = XXX
+    y[1] = 2**round(x[1])
+    y[2] = 2**round(x[2])
+    yy = XXX
+    YYY = XXX
+    for xx in range(XXX):
+        if XXX % (xx + 1) == 0 and abs(xx + 1 - x[3]) < yy:
+            yy = abs(xx + 1 - x[3])
+            YYY = xx + 1
+    y[3] = YYY
+    yy = XXX
+    YYY = XXX
+    for xx in range(XXX):
+        if XXX % (xx + 1) == 0 and abs(xx + 1 - x[4]) < yy:
+            yy = abs(xx + 1 - x[4])
+            YYY = xx + 1
+    y[4] = YYY
+    y[5] = 2**round(x[5])
+    y[6] = 2**round(x[6])
+    y[-1] = 2**round(x[-1])
+    return y
 
 class TurboM(Turbo1):
     """The TuRBO-m algorithm.
@@ -147,6 +176,9 @@ class TurboM(Turbo1):
             X_init = latin_hypercube(self.n_init, self.dim)
             X_init = from_unit_cube(X_init, self.lb, self.ub)
             fX_init = np.array([[self.f(x)] for x in X_init])
+            with open(f"TR-{i}", "a") as tr_file:
+                for x, fx in zip(X_init, fX_init):
+                    tr_file.write(f"{nearest(x)} {fx}\n")
 
             # Update budget and set as initial data for this TR
             self.X = np.vstack((self.X, X_init))
@@ -199,6 +231,9 @@ class TurboM(Turbo1):
                 if len(idx_i) > 0:
                     self.hypers[i] = {}  # Remove model hypers
                     fX_i = fX_next[idx_i]
+                    with open(f"TR-{i}", "a") as tr_file:
+                        for x, fx in zip(X_next[idx_i], fX_i):
+                            tr_file.write(f"{nearest(x)} {fx}\n")
 
                     if self.verbose and fX_i.min() < self.fX.min() - 1e-3 * math.fabs(self.fX.min()):
                         n_evals, fbest = self.n_evals, fX_i.min()
